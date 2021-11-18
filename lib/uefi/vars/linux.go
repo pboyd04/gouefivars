@@ -24,13 +24,13 @@ func GetAllVars() ([]UefiVariable, error) {
 		fileName := filepath.Base(m)
 		parts := strings.SplitN(fileName, "-", 2)
 		ret[i].Name = parts[0]
-		ret[i].Guid = uuid.MustParse(parts[1])
+		ret[i].GUID = uuid.MustParse(parts[1])
 	}
 	return ret, nil
 }
 
 func getFileForVariable(uefiVar *UefiVariable, mode int) (*os.File, error) {
-	fileName := "/sys/firmware/efi/efivars/" + uefiVar.Name + "-" + uefiVar.Guid.String()
+	fileName := "/sys/firmware/efi/efivars/" + uefiVar.Name + "-" + uefiVar.GUID.String()
 	return os.OpenFile(fileName, mode, 0755)
 }
 
@@ -79,7 +79,7 @@ func setRawValueForVar(uefiVar *UefiVariable, value []byte, attributes uint) err
 func GetVarByNameAndGUID(name string, guid uuid.UUID) (*UefiVariable, error) {
 	ret := new(UefiVariable)
 	ret.Name = name
-	ret.Guid = guid
+	ret.GUID = guid
 	file, err := getFileForVariable(ret, os.O_RDONLY)
 	if err != nil {
 		return nil, err
@@ -113,6 +113,6 @@ func GetVarByName(name string, strict bool) (*UefiVariable, error) {
 	base := filepath.Base(match)
 	parts := strings.SplitN(base, "-", 2)
 	v.Name = parts[0]
-	v.Guid = uuid.MustParse(parts[1])
+	v.GUID = uuid.MustParse(parts[1])
 	return v, nil
 }
