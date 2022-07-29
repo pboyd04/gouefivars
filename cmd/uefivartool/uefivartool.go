@@ -15,6 +15,7 @@ func main() {
 	intPrint := flag.Bool("int", false, "Print the variable as an int")
 	name := flag.String("name", "", "The name of the variable")
 	guidStr := flag.String("guid", "", "The guid of the variable")
+	writeString := flag.String("writeStr", "", "The string to write to the variable")
 	flag.Parse()
 
 	if *help {
@@ -28,6 +29,28 @@ func main() {
 			fmt.Printf("Name: %s Guid: %s\n", v.Name, v.GUID)
 		}
 		return
+	} else if len(*writeString) > 0 && len(*name) > 0 && len(*guidStr) > 0 {
+		//Set the variable by name and guid...
+		guid, err := uuid.Parse(*guidStr)
+		if err != nil {
+			fmt.Printf("Failed to parse GUID: %v\n", err)
+			return
+		}
+		v, err := vars.GetVarByNameAndGUID(*name, guid)
+		if err != nil {
+			fmt.Printf("Failed to get variable: %v\n", err)
+			return
+		}
+		attr, err := v.Attributes()
+		if err != nil {
+			fmt.Printf("Failed to get variable attributes: %v\n", err)
+			return
+		}
+		err = v.SetRaw([]byte(*writeString), attr)
+		if err != nil {
+			fmt.Printf("Failed to set variable: %v\n", err)
+			return
+		}
 	} else if len(*name) > 0 && len(*guidStr) > 0 {
 		//Get the variable by name and guid...
 		guid, err := uuid.Parse(*guidStr)

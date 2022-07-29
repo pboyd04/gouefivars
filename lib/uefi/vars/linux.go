@@ -6,11 +6,17 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
+	"golang.org/x/sys/unix"
+)
+
+const (
+	FS_IMMUTABLE_FL = 0x00000010
 )
 
 // GetAllVars gets a list of all the variables
@@ -31,6 +37,28 @@ func GetAllVars() ([]UefiVariable, error) {
 
 func getFileForVariable(uefiVar *UefiVariable, mode int) (*os.File, error) {
 	fileName := "/sys/firmware/efi/efivars/" + uefiVar.Name + "-" + uefiVar.GUID.String()
+	if mode == os.O_RDWR {
+		//Need to check if the file is immutable first...
+		tmpFile, err := os.OpenFile(fileName, os.O_RDONLY, 0755)
+		if err != nil {
+			//Can't even open read only, there is something wrong...
+			return nil, err
+		}
+		attr, err := unix.IoctlGetInt(int(tmpFile.Fd()), unix.FS_IOC_GETFLAGS)
+		if err != nil {
+			log.Printf("cannot get attributes for file %s: %v. Will continue...\n", fileName, err)
+		} else {
+			if attr&FS_IMMUTABLE_FL != 0 {
+				//File is immutable, unset that...
+				attr = attr & ^FS_IMMUTABLE_FL
+				err = unix.IoctlSetPointerInt(int(tmpFile.Fd()), unix.FS_IOC_SETFLAGS, attr)
+				if err != nil {
+					log.Printf("cannot set attributes for file %s: %v. Will continue...\n", fileName, err)
+				}
+			}
+		}
+		tmpFile.Close()
+	}
 	return os.OpenFile(fileName, mode, 0755)
 }
 
